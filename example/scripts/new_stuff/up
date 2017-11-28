@@ -1,0 +1,4 @@
+#!/usr/bin/env sh
+
+
+psql -c 'ALTER table test add test int;'

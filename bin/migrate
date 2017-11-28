@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+
+""" migrate
+
+Usage:
+  migrate add <name> [--folder=<folder>] [--verbose]
+  migrate <target> up-to (<name> | --latest) [--folder=<folder>] [--verbose]
+  migrate <target> rollback-to (<name> | --first) [--folder=<folder>] [--verbose]
+  migrate (-h | --help)
+  migrate --version
+
+Arguments:
+
+  <name>                 The migration step name
+  <target>               Where to execute the migrations
+
+Options:
+  -h --help              Show this screen.
+  --version              Show version.
+  --verbose              Let exceptions raise.
+  --folder=<folder>      Where to read and store files
+
+"""
+
+from docopt import docopt
+import os
+import sys
+import migrate
+
+if __name__ == '__main__':
+    spec = docopt(__doc__, version='0.1.0')
+
+    root = spec['--folder'] or '%s/migrations' % os.getcwd()
+
+    try:
+        if spec['add']:
+            migrate.add(root, spec['<name>'])
+
+        elif spec['up-to']:
+            if spec['--latest']:
+                migrate.up_to_latest(root, spec['<target>'], spec['--verbose'])
+            else:
+                migrate.up_to(root, spec['<name>'])
+
+        elif spec['rollback-to']:
+            if spec['--first']:
+                migrate.rollback_to_first()
+            else:
+                migrate.rollback_to(spec['<name>'])
+    except Exception as e:
+        if spec['--verbose']:
+            raise e
+
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
+
