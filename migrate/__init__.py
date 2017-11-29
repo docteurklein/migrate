@@ -29,23 +29,24 @@ def add(base_dir, step: str):
     plan_file = '%s/plan.db' % (base_dir)
     with contextlib.closing(sqlite3.connect(plan_file)) as conn:
         with conn as plan:
-            plan.execute('create table if not exists steps (name string primary key, created_at datetime)')
-            plan.execute('insert into steps(name, created_at) values (?, datetime(?))', (step, 'now'))
+            plan.execute('create table if not exists steps (id integer primary key autoincrement, created_at datetime, name string unique)')
+            plan.execute('insert into steps(name, created_at) values (?, datetime(?))', [step, 'now'])
             print('Added %s to %s' % (step, plan_file), file=sys.stderr)
 
 
 def up_to_latest(base_dir, target, verbose=False):
     current = get_current_step(target)
     plan_file = '%s/plan.db' % (base_dir)
-    with contextlib.closing(sqlite3.connect(plan_file)) as plan:
-        missing = plan.execute('select name from steps')
-        for step in missing:
-            try:
-                execute_step(base_dir, step[0], 'up', verbose)
-                execute_step(base_dir, step[0], 'verify', verbose)
-            except Exception as e:
-                execute_step(base_dir, step[0], 'rollback', verbose)
-                raise e
+    with contextlib.closing(sqlite3.connect(plan_file)) as conn:
+        with conn as plan:
+            missing = plan.execute('select name from steps where id > (select id from steps where name = ?)', [current])
+            for step in missing:
+                try:
+                    execute_step(base_dir, step[0], 'up', verbose)
+                    execute_step(base_dir, step[0], 'verify', verbose)
+                except Exception as e:
+                    execute_step(base_dir, step[0], 'rollback', verbose)
+                    raise e
 
 
 def execute_step(base_dir, step, type, verbose=False):
