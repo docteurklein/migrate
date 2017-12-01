@@ -3,15 +3,15 @@
 """ migrate
 
 Usage:
-  migrate add <name> [--folder=<folder>] [--verbose]
-  migrate <target> up-to (<name> | --latest) [--folder=<folder>] [--verbose]
-  migrate <target> rollback-to (<name> | --first) [--folder=<folder>] [--verbose]
+  migrate add <step> [--folder=<folder>] [--verbose]
+  migrate <target> up-to (<step> | --latest) [--folder=<folder>] [--verbose]
+  migrate <target> rollback-to (<step> | --first) [--folder=<folder>] [--verbose]
   migrate (-h | --help)
   migrate --version
 
 Arguments:
 
-  <name>                 The migration step name
+  <step>                 The step to go to
   <target>               Where to execute the migrations
 
 Options:
@@ -34,19 +34,19 @@ if __name__ == '__main__':
 
     try:
         if spec['add']:
-            migrate.add(root, spec['<name>'])
+            migrate.add(root, spec['<step>'])
 
         elif spec['up-to']:
             if spec['--latest']:
                 migrate.up_to_latest(root, spec['<target>'], spec['--verbose'])
             else:
-                migrate.up_to(root, spec['<name>'])
+                migrate.up_to(root, spec['<target>'], spec['<step>'], spec['--verbose'])
 
         elif spec['rollback-to']:
             if spec['--first']:
-                migrate.rollback_to_first()
+                migrate.rollback_to_first(root, spec['<target>'], spec['--verbose'])
             else:
-                migrate.rollback_to(spec['<name>'])
+                migrate.rollback_to(root, spec['<target>'], spec['<step>'], spec['--verbose'])
     except Exception as e:
         if spec['--verbose']:
             raise e

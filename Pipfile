@@ -8,6 +8,7 @@ name = "pypi"
 [packages]
 
 docopt = "*"
+paramiko = "*"
 
 
 [dev-packages]

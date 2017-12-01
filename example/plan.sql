@@ -1,0 +1,10 @@
+BEGIN TRANSACTION;
+CREATE TABLE steps (id integer primary key autoincrement, created_at datetime, name string unique);
+INSERT INTO "steps" VALUES(1,'2017-11-29 10:31:25','test1');
+INSERT INTO "steps" VALUES(2,'2017-11-29 10:31:29','test2');
+INSERT INTO "steps" VALUES(3,'2017-11-29 10:31:33','test3');
+INSERT INTO "steps" VALUES(4,'2017-11-29 10:32:31','test4');
+INSERT INTO "steps" VALUES(5,'2017-11-29 10:32:42','test5');
+INSERT INTO "steps" VALUES(6,'2017-11-29 10:41:53','test6');
+INSERT INTO "steps" VALUES(7,'2017-11-29 10:44:48','test7');
+COMMIT;

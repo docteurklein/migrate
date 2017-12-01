@@ -12,12 +12,12 @@ A migration runner, not especially targeting sql databases.
 
 ### Execute migrations
 
-    migrate up-to 'some_next_step'
-    migrate up-to --all
+    migrate prod up-to 'some_next_step'
+    migrate prod up-to --all
 
 ### Rollback migrations
 
-    migrate rollback-to 'some_previous_step'
+    migrate prod rollback-to 'some_previous_step'
 
 
 ## File structure
