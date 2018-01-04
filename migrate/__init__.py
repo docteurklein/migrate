@@ -41,17 +41,26 @@ def add(base_dir, step: str):
 def get_current_step(target):
     params = urlparse(target)
     client = paramiko.SSHClient()
-    client.connect(params.hostname, port=params.post, username=params.username, password=params.password)
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(params.hostname, port=params.port, username=params.username, password=params.password)
     stdin, stdout, stderr = client.exec_command('cat %s' % params.path)
+    if stdout.channel.recv_exit_status() != 0:
+        pass
+        #raise Exception
     return stdout.read()
 
 
 def put_current_step(target, step):
     params = urlparse(target)
     client = paramiko.SSHClient()
-    client.connect(params.hostname, port=params.post, username=params.username, password=params.password)
-    stdin, stdout, stderr = client.exec_command('cat - > %s' % params.path)
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(params.hostname, port=params.port, username=params.username, password=params.password)
+    stdin, stdout, stderr = client.exec_command('sh -c "cat - > %s"' % params.path)
     stdin.write(step)
+    stdin.channel.close()
+    if stdout.channel.recv_exit_status() != 0:
+        pass
+        #raise Exception
 
 
 def up_to_latest(base_dir, target, verbose=False):
@@ -63,7 +72,7 @@ def up_to_latest(base_dir, target, verbose=False):
                 where id > (select id from steps where name = ?)
                 order by id asc
         """, [current])
-        execute_missing(base_dir, [x[0] for x in steps], verbose)
+        execute_missing(target, base_dir, [x[0] for x in steps], verbose)
 
 
 def up_to(base_dir, target, step, verbose=False):
@@ -76,7 +85,7 @@ def up_to(base_dir, target, step, verbose=False):
                 and   id <= (select id from steps where name = ?)
                 order by id asc
         """, [current, step])
-        execute_missing(base_dir, [x[0] for x in steps], verbose)
+        execute_missing(target, base_dir, [x[0] for x in steps], verbose)
 
 
 def rollback_to(base_dir, target, step: str, verbose=False):
@@ -90,7 +99,7 @@ def rollback_to(base_dir, target, step: str, verbose=False):
                 order by id desc
         """, [step, current])
         for step in steps:
-            execute_step(base_dir, step[0], 'rollback', verbose)
+            execute_step(target, base_dir, step[0], 'rollback', verbose)
 
 
 def rollback_to_first(base_dir, target, verbose=False):
@@ -103,24 +112,24 @@ def rollback_to_first(base_dir, target, verbose=False):
                 order by id desc
         """, [current])
         for step in steps:
-            execute_step(base_dir, step[0], 'rollback', verbose)
+            execute_step(target, base_dir, step[0], 'rollback', verbose)
 
 
-def execute_missing(base_dir, steps, verbose):
+def execute_missing(target, base_dir, steps, verbose):
     executed = []
     for step in steps:
         try:
-            execute_step(base_dir, step, 'up', verbose)
-            execute_step(base_dir, step, 'verify', verbose)
+            execute_step(target, base_dir, step, 'up', verbose)
+            execute_step(target, base_dir, step, 'verify', verbose)
             executed.append(step)
         except Exception as e:
-            execute_step(base_dir, step, 'rollback', verbose)
+            execute_step(target, base_dir, step, 'rollback', verbose)
             for to_rollback in reversed(executed):
-                execute_step(base_dir, to_rollback, 'rollback', verbose)
+                execute_step(target, base_dir, to_rollback, 'rollback', verbose)
             raise e
 
 
-def execute_step(base_dir, step, type, verbose=False):
+def execute_step(target, base_dir, step, type, verbose=False):
     pattern = '%s/scripts/%s/*%s*' % (base_dir, step, type)
     scripts = glob.glob(pattern)
     if not scripts:
@@ -141,6 +150,8 @@ def execute_step(base_dir, step, type, verbose=False):
 
         if process.returncode != 0:
             raise Exception
+
+    put_current_step(target, step)
 
 
 @contextlib.contextmanager
