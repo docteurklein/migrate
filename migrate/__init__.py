@@ -7,7 +7,7 @@ import subprocess
 import sqlite3
 import contextlib
 from urllib.parse import urlparse
-import paramiko
+from . import targets
 
 
 def add(base_dir, step: str):
@@ -40,27 +40,12 @@ def add(base_dir, step: str):
 
 def get_current_step(target):
     params = urlparse(target)
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(params.hostname, port=params.port, username=params.username, password=params.password)
-    stdin, stdout, stderr = client.exec_command('cat %s' % params.path)
-    if stdout.channel.recv_exit_status() != 0:
-        pass
-        #raise Exception
-    return stdout.read()
+    return getattr(targets, params.scheme).get_current_step(params)
 
 
 def put_current_step(target, step):
     params = urlparse(target)
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(params.hostname, port=params.port, username=params.username, password=params.password)
-    stdin, stdout, stderr = client.exec_command('sh -c "cat - > %s"' % params.path)
-    stdin.write(step)
-    stdin.channel.close()
-    if stdout.channel.recv_exit_status() != 0:
-        pass
-        #raise Exception
+    return getattr(targets, params.scheme).put_current_step(step, params)
 
 
 def up_to_latest(base_dir, target, verbose=False):
@@ -69,10 +54,10 @@ def up_to_latest(base_dir, target, verbose=False):
     with persisted_plan(plan_file) as plan:
         steps = plan.execute("""
             select name from steps
-                where id > (select id from steps where name = ?)
+                where id > (select id from steps where name = ? union all select 0)
                 order by id asc
         """, [current])
-        execute_missing(target, base_dir, [x[0] for x in steps], verbose)
+        execute_missing(target, base_dir, [row[0] for row in steps], verbose)
 
 
 def up_to(base_dir, target, step, verbose=False):
@@ -81,38 +66,46 @@ def up_to(base_dir, target, step, verbose=False):
     with persisted_plan(plan_file) as plan:
         steps = plan.execute("""
             select name from steps
-                where id >  (select id from steps where name = ?)
-                and   id <= (select id from steps where name = ?)
+                where id >  (select id from steps where name = ? union all select 0)
+                and   id <= (select id from steps where name = ? union all select max(id) from steps)
                 order by id asc
         """, [current, step])
-        execute_missing(target, base_dir, [x[0] for x in steps], verbose)
+        execute_missing(target, base_dir, [row[0] for row in steps], verbose)
 
 
 def rollback_to(base_dir, target, step: str, verbose=False):
     plan_file = '%s/plan.sql' % (base_dir)
     current = get_current_step(target)
+    if not current:
+        return
     with persisted_plan(plan_file) as plan:
         steps = plan.execute("""
             select name from steps
-                where id >  (select id from steps where name = ?)
-                and   id <= (select id from steps where name = ?)
+                where id >  (select id from steps where name = ? union all select 0)
+                and   id <= (select id from steps where name = ? union all select max(id) from steps)
                 order by id desc
         """, [step, current])
-        for step in steps:
-            execute_step(target, base_dir, step[0], 'rollback', verbose)
+        for row in steps:
+            execute_step(target, base_dir, row[0], 'rollback', verbose)
+
+    put_current_step(target, step)
 
 
 def rollback_to_first(base_dir, target, verbose=False):
     plan_file = '%s/plan.sql' % (base_dir)
     current = get_current_step(target)
+    if not current:
+        return
     with persisted_plan(plan_file) as plan:
         steps = plan.execute("""
             select name from steps
-                where id <= (select id from steps where name = ?)
+                where id <= (select id from steps where name = ? union all select max(id) from steps)
                 order by id desc
         """, [current])
-        for step in steps:
-            execute_step(target, base_dir, step[0], 'rollback', verbose)
+        for row in steps:
+            execute_step(target, base_dir, row[0], 'rollback', verbose)
+
+    put_current_step(target, '')
 
 
 def execute_missing(target, base_dir, steps, verbose):
@@ -151,7 +144,8 @@ def execute_step(target, base_dir, step, type, verbose=False):
         if process.returncode != 0:
             raise Exception
 
-    put_current_step(target, step)
+    if type in ['verify', 'rollback']:
+        put_current_step(target, step)
 
 
 @contextlib.contextmanager
@@ -170,6 +164,7 @@ def persisted_plan(plan_file, read_only=True):
                     name string unique
                 )
             """)
+
             yield plan
 
             if not read_only:
