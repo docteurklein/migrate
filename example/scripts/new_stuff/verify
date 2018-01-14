@@ -1,3 +1,0 @@
-#!/usr/bin/env sh
-
-psql -c 'select test from test'

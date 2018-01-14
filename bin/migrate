@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """ migrate
 
 Usage:
-  migrate add <step> [--folder=<folder>] [--verbose]
+  migrate add <step> <type> [--folder=<folder>] [--verbose]
   migrate <target> up-to (<step> | --latest) [--folder=<folder>] [--verbose]
   migrate <target> rollback-to (<step> | --first) [--folder=<folder>] [--verbose]
   migrate (-h | --help)
@@ -11,7 +11,8 @@ Usage:
 
 Arguments:
 
-  <step>                 The step to go to
+  <step>                 The step name
+  <type>                 The file extension
   <target>               Where to execute the migrations
 
 Options:
@@ -34,7 +35,7 @@ if __name__ == '__main__':
 
     try:
         if spec['add']:
-            migrate.add(root, spec['<step>'])
+            migrate.add(root, spec['<step>'], spec['<type>'])
 
         elif spec['up-to']:
             if spec['--latest']:

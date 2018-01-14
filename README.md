@@ -6,18 +6,21 @@ A migration runner, not especially targeting sql databases.
 
 ## How ?
 
+    docker run -v $PWD:/usr/src/app -u 1000:1000 docteurklein/migrate
+
 ### Add a new migration step
 
-    migrate add 'create_missing_indexes'
+    migrate add 'create_missing_indexes' sh
 
 ### Execute migrations
 
     migrate prod up-to 'some_next_step'
-    migrate prod up-to --all
+    migrate prod up-to --latest
 
 ### Rollback migrations
 
     migrate prod rollback-to 'some_previous_step'
+    migrate prod rollback-to --first
 
 
 ## File structure
@@ -31,8 +34,8 @@ You can specify many scripts per step that matches the glob pattern:
 
 Use numeric prefixes to guarantee the order of execution, for example:
 
- - `migrations/create_missing_indexes/1-up.sql`
- - `migrations/create_missing_indexes/2-up.sql`
+ - `migrations/create_missing_indexes/1-up.sh`
+ - `migrations/create_missing_indexes/2-up.sh`
 
 
 ## Planning
@@ -44,6 +47,26 @@ Steps are executed sequentially.
 After each step execution, the `verify` script is invoked.
 
 If `verify` exits with a status code different than `0`, the rollback script is executed, and the whole migration stops.
+
+
+## Targets
+
+The target is represented by an URL (containing credentials and configuration).
+The target is the thing we want to mutate.
+The target stores the name of the last migrated step.
+
+Currently supported targets are:
+
+ - postgresql: `pg://user:password@hostname/db_name`
+
+
+This is the list of supported targets
+
+
+### SQL scripts
+
+Files ending with `.sql` are treated differently than others:
+their contents are passed to the current transaction opened on the target.
 
 
 ## Examples
@@ -94,7 +117,7 @@ curl -f -X GET http://elasticsearch.local:9200/twitter
 ### shebang
 
 
-Each step uses executable files with shebang for a maximum flexibility.  
+Each step uses executable files with shebang (except `.sql` files) for a maximum flexibility.  
 It means you could use any script that works with a shebang:
 
  - `#!/usr/bin/env sql --shebang pg://scott:tiger@pg.example.com/pgdb`

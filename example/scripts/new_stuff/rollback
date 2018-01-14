@@ -1,3 +1,0 @@
-#!/usr/bin/env sh
-
-psql -c 'ALTER table test drop test;'
