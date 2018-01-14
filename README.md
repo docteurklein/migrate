@@ -59,9 +59,16 @@ Currently supported targets are:
 
  - postgresql: `pg://user:password@hostname/db_name`
 
+### Environment variables
 
-This is the list of supported targets
+ - `POSTGRES_DBNAME`
+ - `POSTGRES_USER`
+ - `POSTGRES_PASSWORD`
+ - `POSTGRES_PASSWORD_FILE` (wins over `POSTGRES_PASSWORD`)
+ - `POSTGRES_HOST`
+ - `POSTGRES_PORT`
 
+Those variables take precedence over the values passed in URL.
 
 ### SQL scripts
 

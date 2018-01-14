@@ -1,6 +1,8 @@
 
 import psycopg2
 import contextlib
+import os
+
 
 class Context():
     def __init__(self, cursor):
@@ -25,12 +27,17 @@ class Context():
 
 @contextlib.contextmanager
 def get_target_context(params):
+    password = os.environ.get('POSTGRES_PASSWORD', params.password)
+    if os.path.exists(os.environ.get('POSTGRES_PASSWORD_FILE', '')):
+        with open(os.environ.get('POSTGRES_PASSWORD_FILE'), 'r') as file:
+            password = file.read()
+
     with psycopg2.connect(
-        dbname=params.path[1:],
-        user=params.username,
-        password=params.password,
-        host=params.hostname,
-        port=params.port
+        dbname=os.environ.get('POSTGRES_DBNAME', params.path[1:]),
+        user=os.environ.get('POSTGRES_USER', params.username),
+        password=password,
+        host=os.environ.get('POSTGRES_HOST', params.hostname),
+        port=os.environ.get('POSTGRES_PORT', params.port)
     ) as conn:
         with conn.cursor() as cursor:
             yield Context(cursor)
