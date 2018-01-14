@@ -3,6 +3,7 @@
 """ migrate
 
 Usage:
+  migrate <target> status [--folder=<folder>] [--verbose]
   migrate add <step> <type> [--folder=<folder>] [--verbose]
   migrate <target> up-to (<step> | --latest) [--folder=<folder>] [--verbose]
   migrate <target> rollback-to (<step> | --first) [--folder=<folder>] [--verbose]
@@ -33,8 +34,14 @@ if __name__ == '__main__':
 
     root = spec['--folder'] or '%s/migrations' % os.getcwd()
 
+    if spec['--verbose']:
+        print('Using root folder: %s' % (root), file=sys.stderr)
+
     try:
-        if spec['add']:
+        if spec['status']:
+            migrate.status(root, spec['<target>'])
+
+        elif spec['add']:
             migrate.add(root, spec['<step>'], spec['<type>'])
 
         elif spec['up-to']:

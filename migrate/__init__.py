@@ -10,6 +10,19 @@ from urllib.parse import urlparse
 from . import targets
 
 
+def status(base_dir, target):
+    plan_file = '%s/plan.sql' % (base_dir)
+    with get_target_context(target) as context:
+        current = context.get_current_step()
+        print('current step: %s' % (current or 'n/a'))
+        with persisted_plan(plan_file) as plan:
+            steps = plan.execute("""
+                select name from steps
+                    where id > (select id from steps where name = ? union all select 0)
+                    order by id asc
+            """, [current])
+            print('missing steps: %s' % [x[0] for x in steps])
+
 def add(base_dir, step: str, type: str):
     files = ['up', 'rollback', 'verify']
 
