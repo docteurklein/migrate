@@ -14,13 +14,13 @@ A migration runner, not especially targeting sql databases.
 
 ### Execute migrations
 
-    migrate prod up-to 'some_next_step'
-    migrate prod up-to --latest
+    migrate pg://prod up-to 'some_next_step'
+    migrate pg://prod up-to --latest
 
 ### Rollback migrations
 
-    migrate prod rollback-to 'some_previous_step'
-    migrate prod rollback-to --first
+    migrate pg://prod rollback-to 'some_previous_step'
+    migrate pg://prod rollback-to --first
 
 
 ## File structure
@@ -124,22 +124,5 @@ curl -f -X GET http://elasticsearch.local:9200/twitter
 ### shebang
 
 
-Each step uses executable files with shebang (except `.sql` files) for a maximum flexibility.  
-It means you could use any script that works with a shebang:
-
- - `#!/usr/bin/env sql --shebang pg://scott:tiger@pg.example.com/pgdb`
- - `#!/usr/bin/env psql -f "$0"
- - `#!/usr/bin/env sh
- - `#!/usr/bin/env python
-
-Shebangs are however very limited (for passing credential f.e), so you might want to define your own binaries, for example:
-
- - `bin/custom-shebang-bin`:
-
-```sh
-#!/usr/bin/env sh
-psql -u $DB_USER -p $DB_PASS -f "$0"
-```
-
-and then using it as a shebang for your scripts. This requires adding `./bin` to your `$PATH`.
+Each step uses executable files with shebang (except `.sql` files) for a maximum flexibility.
 
