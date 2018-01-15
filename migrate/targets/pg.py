@@ -7,15 +7,16 @@ import os
 class Context():
     def __init__(self, cursor):
         self.cursor = cursor
-        self.cursor.execute('create table if not exists current_migration (name varchar)')
+        self.cursor.execute('create schema if not exists migrations')
+        self.cursor.execute('create table if not exists migrations.current_migration (name varchar)')
 
     def get_current_step(self):
-        self.cursor.execute('select name from current_migration union all select null fetch first 1 row only')
+        self.cursor.execute('select name from migrations.current_migration union all select null fetch first 1 row only')
         return self.cursor.fetchone()[0]
 
     def put_current_step(self, step):
-        self.cursor.execute('delete from current_migration')
-        self.cursor.execute('insert into current_migration values (%s)', [step])
+        self.cursor.execute('delete from migrations.current_migration')
+        self.cursor.execute('insert into migrations.current_migration values (%s)', [step])
 
     def supports(self, file):
         return file.endswith('.sql')
