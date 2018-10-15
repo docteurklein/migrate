@@ -7,6 +7,9 @@ Usage:
   migrate add <step> <type> [--folder=<folder>] [--verbose]
   migrate <target> up-to (<step> | --latest) [--folder=<folder>] [--verbose]
   migrate <target> rollback-to (<step> | --first) [--folder=<folder>] [--verbose]
+  migrate <target> previous [--folder=<folder>] [--verbose]
+  migrate <target> sql <query> [--verbose]
+  migrate <target> reset [--verbose]
   migrate (-h | --help)
   migrate --version
 
@@ -50,11 +53,21 @@ if __name__ == '__main__':
             else:
                 migrate.up_to(root, spec['<target>'], spec['<step>'], spec['--verbose'])
 
+        elif spec['previous']:
+            migrate.previous(root, spec['<target>'], spec['--verbose'])
+
         elif spec['rollback-to']:
             if spec['--first']:
                 migrate.rollback_to_first(root, spec['<target>'], spec['--verbose'])
             else:
                 migrate.rollback_to(root, spec['<target>'], spec['<step>'], spec['--verbose'])
+
+        elif spec['sql']:
+            results = migrate.sql(root, spec['<target>'], spec['<query>'], spec['--verbose'])
+            [print(result) for result in results]
+
+        elif spec['reset']:
+            migrate.reset(root, spec['<target>'], spec['--verbose'])
     except Exception as e:
         if spec['--verbose']:
             raise e

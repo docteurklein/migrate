@@ -21,6 +21,7 @@ A migration runner, not especially targeting sql databases.
 
     migrate pg://prod rollback-to 'some_previous_step'
     migrate pg://prod rollback-to --first
+    migrate pg://prod rollback-to --previous
 
 
 ## File structure

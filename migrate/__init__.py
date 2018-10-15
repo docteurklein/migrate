@@ -67,7 +67,7 @@ def up_to_latest(base_dir, target, verbose=False):
                     where id > (select id from steps where name = ? union all select 0)
                     order by id asc
             """, [current])
-            execute_missing(context, base_dir, [row[0] for row in steps], verbose)
+            execute_missing(context, base_dir, [row[0] for row in steps], current, verbose)
 
 
 def up_to(base_dir, target, step, verbose=False):
@@ -81,7 +81,7 @@ def up_to(base_dir, target, step, verbose=False):
                     and   id <= (select id from steps where name = ? union all select max(id) from steps)
                     order by id asc
             """, [current, step])
-            execute_missing(context, base_dir, [row[0] for row in steps], verbose)
+            execute_missing(context, base_dir, [row[0] for row in steps], current, verbose)
 
 
 def rollback_to(base_dir, target, step: str, verbose=False):
@@ -98,9 +98,9 @@ def rollback_to(base_dir, target, step: str, verbose=False):
                     order by id desc
             """, [step, current])
             for row in steps:
-                execute_step(context, base_dir, row[0], 'rollback', verbose)
+                execute_step(context, base_dir, row[0], current, 'rollback', verbose)
 
-        context.put_current_step(step)
+        context.put_current_step(step, current)
 
 
 def rollback_to_first(base_dir, target, verbose=False):
@@ -116,26 +116,50 @@ def rollback_to_first(base_dir, target, verbose=False):
                     order by id desc
             """, [current])
             for row in steps:
-                execute_step(context, base_dir, row[0], 'rollback', verbose)
+                execute_step(context, base_dir, row[0], current, 'rollback', verbose)
 
-        context.put_current_step('')
+        context.put_current_step(None, current)
 
 
-def execute_missing(context, base_dir, steps, verbose):
+def previous(base_dir, target, verbose=False):
+    plan_file = '%s/plan.sql' % (base_dir)
+    with get_target_context(target) as context:
+        current = context.get_current_step()
+        previous = context.get_previous_step()
+
+        with persisted_plan(plan_file) as plan:
+            direction_is_up = plan.execute("""
+                select current.id < previous.id
+                    from (select * from steps where name = ?) current
+                    join (select * from steps where name = ?) previous
+            """, [current, previous]).fetchone()
+
+            if direction_is_up is None:
+                print('no previous migration', file=sys.stderr)
+                return
+
+            print('going to %s (direction %s)' % (previous, 'up' if direction_is_up[0] else 'rollback'), file=sys.stderr)
+            if direction_is_up[0]:
+                up_to(base_dir, target, previous, verbose)
+            else:
+                rollback_to(base_dir, target, previous, verbose)
+
+
+def execute_missing(context, base_dir, steps, current, verbose):
     executed = []
     for step in steps:
         try:
-            execute_step(context, base_dir, step, 'up', verbose)
-            execute_step(context, base_dir, step, 'verify', verbose)
+            execute_step(context, base_dir, step, current, 'up', verbose)
+            execute_step(context, base_dir, step, current, 'verify', verbose)
             executed.append(step)
         except Exception as e:
-            execute_step(context, base_dir, step, 'rollback', verbose)
+            execute_step(context, base_dir, step, current, 'rollback', verbose)
             for to_rollback in reversed(executed):
-                execute_step(context, base_dir, to_rollback, 'rollback', verbose)
+                execute_step(context, base_dir, to_rollback, current, 'rollback', verbose)
             raise e
 
 
-def execute_step(context, base_dir, step, type, verbose=False):
+def execute_step(context, base_dir, step, current, type, verbose=False):
     pattern = '%s/scripts/%s/*%s*' % (base_dir, step, type)
     scripts = glob.glob(pattern)
     if not scripts:
@@ -162,8 +186,15 @@ def execute_step(context, base_dir, step, type, verbose=False):
                 raise Exception
 
     if type in ['verify', 'rollback']:
-        context.put_current_step(step)
+        context.put_current_step(step, current)
 
+def sql(base_dir, target, query, verbose=False):
+    with get_target_context(target) as context:
+        return context.sql(query)
+
+def reset(base_dir, target, verbose=False):
+    with get_target_context(target) as context:
+        context.reset()
 
 @contextlib.contextmanager
 def persisted_plan(plan_file, read_only=True):

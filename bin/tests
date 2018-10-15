@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+
+set -exuo pipefail
+
+migrate pg:// sql 'drop table if exists test'
+migrate pg:// reset --verbose
+migrate pg:// up-to --latest --folder=example --verbose
+migrate pg:// rollback-to --first --verbose --folder=example
+migrate pg:// up-to test1 --verbose --folder=example
+migrate pg:// up-to --latest --folder=example --verbose
+migrate pg:// previous --verbose --folder=example
+migrate pg:// previous --verbose --folder=example
+migrate pg:// previous --verbose --folder=example
+migrate pg:// previous --verbose --folder=example
+migrate pg:// up-to --latest --folder=example --verbose
+
+migrate pg:// sql 'select test2 from test'

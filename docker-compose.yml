@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+
+    postgres:
+        image: postgres:alpine
+        environment:
+            POSTGRES_USER: migrate
+            POSTGRES_DB: migrate
+            POSTGRES_PASSWORD: migrate
+
+    tests:
+        image: docteurklein/migrate
+        command: bin/tests
+        restart: on-failure
+        build: .
+        environment:
+            POSTGRES_HOST: postgres
+            POSTGRES_DBNAME: migrate
+            POSTGRES_USER: migrate
+            POSTGRES_PASSWORD: migrate
+

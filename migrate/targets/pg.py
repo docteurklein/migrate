@@ -2,21 +2,38 @@
 import psycopg2
 import contextlib
 import os
+import sys
 
 
 class Context():
     def __init__(self, cursor):
         self.cursor = cursor
+        self.schema()
+
+    def reset(self):
+        self.cursor.execute('drop table if exists migrations.history')
+        self.schema()
+
+    def schema(self):
         self.cursor.execute('create schema if not exists migrations')
-        self.cursor.execute('create table if not exists migrations.current_migration (name varchar)')
+        self.cursor.execute('create table if not exists migrations.history (id serial primary key, name varchar, date timestamp not null default now(), previous varchar)')
 
     def get_current_step(self):
-        self.cursor.execute('select name from migrations.current_migration union all select null fetch first 1 row only')
-        return self.cursor.fetchone()[0]
+        self.cursor.execute('select name from migrations.history order by id desc limit 1')
+        row = self.cursor.fetchone()
+        if row:
+            return row[0]
+        return None
 
-    def put_current_step(self, step):
-        self.cursor.execute('delete from migrations.current_migration')
-        self.cursor.execute('insert into migrations.current_migration values (%s)', [step])
+    def get_previous_step(self):
+        self.cursor.execute('select previous from migrations.history order by id desc limit 1')
+        row = self.cursor.fetchone()
+        if row:
+            return row[0]
+        return None
+
+    def put_current_step(self, step, previous = None):
+        self.cursor.execute('insert into migrations.history(name, previous) values (%s, %s)', [step, previous])
 
     def supports(self, file):
         return file.endswith('.sql')
@@ -24,6 +41,12 @@ class Context():
     def handle(self, file):
         with open(file, 'r') as file:
             return self.cursor.execute(file.read())
+
+    def sql(self, query):
+        self.cursor.execute(query)
+        if self.cursor.description is None:
+            return []
+        return self.cursor.fetchall()
 
 
 @contextlib.contextmanager

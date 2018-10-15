@@ -1,0 +1,8 @@
+version: '3'
+
+services:
+    tests:
+        volumes:
+            - ./:/usr/src/app
+
+
