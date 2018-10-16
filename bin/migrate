@@ -10,6 +10,7 @@ Usage:
   migrate <target> previous [--folder=<folder>] [--verbose]
   migrate <target> sql <query> [--verbose]
   migrate <target> reset [--verbose]
+  migrate <target> force-state <step> [--verbose]
   migrate (-h | --help)
   migrate --version
 
@@ -68,6 +69,9 @@ if __name__ == '__main__':
 
         elif spec['reset']:
             migrate.reset(root, spec['<target>'], spec['--verbose'])
+
+        elif spec['force-state']:
+            migrate.force_state(root, spec['<target>'], spec['<step>'], spec['--verbose'])
     except Exception as e:
         if spec['--verbose']:
             raise e

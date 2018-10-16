@@ -11,7 +11,7 @@ services:
 
     tests:
         image: docteurklein/migrate
-        command: bin/tests
+        entrypoint: bin/tests
         restart: on-failure
         build: .
         environment:

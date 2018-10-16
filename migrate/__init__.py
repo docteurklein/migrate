@@ -196,6 +196,10 @@ def reset(base_dir, target, verbose=False):
     with get_target_context(target) as context:
         context.reset()
 
+def force_state(base_dir, target, step, verbose=False):
+    with get_target_context(target) as context:
+        context.put_current_step(step, context.get_current_step())
+
 @contextlib.contextmanager
 def persisted_plan(plan_file, read_only=True):
     with contextlib.closing(sqlite3.connect(':memory:')) as conn:
