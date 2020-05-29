@@ -1,15 +1,10 @@
 [[source]]
-
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
-
 [packages]
-
 docopt = "*"
-"psycopg2" = "*"
-
+"psycopg2-binary" = "*"
 
 [dev-packages]
-
