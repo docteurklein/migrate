@@ -20,9 +20,13 @@ A migration runner, not especially targeting sql databases.
 ### Rollback migrations
 
     migrate pg://prod rollback-to 'some_previous_step'
-    migrate pg://prod rollback-to --first
+    migrate pg://prod rollback-to --zero
     migrate pg://prod rollback-to --previous
 
+
+## verifying side-effects before executing them
+
+All commands having side effects have the `--dry-run` and `--verbose` option. If you use them both, you'll see exactly what would be executed.
 
 ## File structure
 
@@ -47,7 +51,7 @@ Steps are executed sequentially.
 
 After each step execution, the `verify` script is invoked.
 
-If `verify` exits with a status code different than `0`, the rollback script is executed, and the whole migration stops.
+If `verify` exits with a status code different than `0`, all rollback scripts from impacted steps are executed, and the whole migration stops.
 
 
 ## Targets

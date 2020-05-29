@@ -60,7 +60,7 @@ def get_target_context(target):
         return importlib.import_module(params.scheme).get_target_context(params)
 
 
-def up_to_latest(base_dir, target, verbose=False):
+def up_to_latest(base_dir, target, verbose=False, dry_run=False):
     plan_file = '%s/plan.sql' % (base_dir)
     with get_target_context(target) as context:
         current = context.get_current_step()
@@ -70,10 +70,10 @@ def up_to_latest(base_dir, target, verbose=False):
                     where id > (select id from steps where name = ? union all select 0)
                     order by id asc
             """, [current])
-            execute_missing(context, base_dir, [row[0] for row in steps], current, verbose)
+            execute_missing(context, base_dir, [row[0] for row in steps], current, verbose, dry_run)
 
 
-def up_to(base_dir, target, step, verbose=False):
+def up_to(base_dir, target, step, verbose=False, dry_run=False):
     plan_file = '%s/plan.sql' % (base_dir)
     with get_target_context(target) as context:
         current = context.get_current_step()
@@ -84,10 +84,10 @@ def up_to(base_dir, target, step, verbose=False):
                     and   id <= (select id from steps where name = ? union all select max(id) from steps)
                     order by id asc
             """, [current, step])
-            execute_missing(context, base_dir, [row[0] for row in steps], current, verbose)
+            execute_missing(context, base_dir, [row[0] for row in steps], current, verbose, dry_run)
 
 
-def rollback_to(base_dir, target, step: str, verbose=False):
+def rollback_to(base_dir, target, step: str, verbose=False, dry_run=False):
     plan_file = '%s/plan.sql' % (base_dir)
     with get_target_context(target) as context:
         current = context.get_current_step()
@@ -101,12 +101,13 @@ def rollback_to(base_dir, target, step: str, verbose=False):
                     order by id desc
             """, [step, current])
             for row in steps:
-                execute_step(context, base_dir, row[0], current, 'rollback', verbose)
+                execute_step(context, base_dir, row[0], current, 'rollback', verbose, dry_run)
 
-        context.put_current_step(step, current)
+        if not dry_run:
+            context.put_current_step(step, current)
 
 
-def rollback_to_first(base_dir, target, verbose=False):
+def rollback_to_zero(base_dir, target, verbose=False, dry_run=False):
     plan_file = '%s/plan.sql' % (base_dir)
     with get_target_context(target) as context:
         current = context.get_current_step()
@@ -119,12 +120,13 @@ def rollback_to_first(base_dir, target, verbose=False):
                     order by id desc
             """, [current])
             for row in steps:
-                execute_step(context, base_dir, row[0], current, 'rollback', verbose)
+                execute_step(context, base_dir, row[0], current, 'rollback', verbose, dry_run)
 
-        context.put_current_step(None, current)
+        if not dry_run:
+            context.put_current_step(None, current)
 
 
-def previous(base_dir, target, verbose=False):
+def previous(base_dir, target, verbose=False, dry_run=False):
     plan_file = '%s/plan.sql' % (base_dir)
     with get_target_context(target) as context:
         current = context.get_current_step()
@@ -143,26 +145,26 @@ def previous(base_dir, target, verbose=False):
 
             print('going to %s (direction %s)' % (previous, 'up' if direction_is_up[0] else 'rollback'), file=sys.stderr)
             if direction_is_up[0]:
-                up_to(base_dir, target, previous, verbose)
+                up_to(base_dir, target, previous, verbose, dry_run)
             else:
-                rollback_to(base_dir, target, previous, verbose)
+                rollback_to(base_dir, target, previous, verbose, dry_run)
 
 
-def execute_missing(context, base_dir, steps, current, verbose):
+def execute_missing(context, base_dir, steps, current, verbose, dry_run):
     executed = []
     for step in steps:
         try:
-            execute_step(context, base_dir, step, current, 'up', verbose)
-            execute_step(context, base_dir, step, current, 'verify', verbose)
+            execute_step(context, base_dir, step, current, 'up', verbose, dry_run)
+            execute_step(context, base_dir, step, current, 'verify', verbose, dry_run)
             executed.append(step)
         except Exception as e:
-            execute_step(context, base_dir, step, current, 'rollback', verbose)
+            execute_step(context, base_dir, step, current, 'rollback', verbose, dry_run)
             for to_rollback in reversed(executed):
-                execute_step(context, base_dir, to_rollback, current, 'rollback', verbose)
+                execute_step(context, base_dir, to_rollback, current, 'rollback', verbose, dry_run)
             raise e
 
 
-def execute_step(context, base_dir, step, current, type, verbose=False):
+def execute_step(context, base_dir, step, current, type, verbose=False, dry_run=False):
     pattern = '%s/scripts/%s/*%s*' % (base_dir, step, type)
     scripts = glob.glob(pattern)
     if not scripts:
@@ -173,10 +175,32 @@ def execute_step(context, base_dir, step, current, type, verbose=False):
 
     for script in scripts:
         if context.supports(script):
-            print('letting target handle %s' % script, file=sys.stderr)
+            if dry_run:
+                print('would let target handle %s' % script, file=sys.stderr)
+            else:
+                print('letting target handle %s' % script, file=sys.stderr)
+
+            if verbose:
+                with open(script, 'r') as file:
+                    print(file.read())
+
+            if dry_run:
+                return
+
             context.handle(script)
         else:
-            print('executing %s' % script, file=sys.stderr)
+            if dry_run:
+                print('would execute %s' % script, file=sys.stderr)
+            else:
+                print('executing %s' % script, file=sys.stderr)
+
+            if verbose:
+                with open(script, 'r') as file:
+                    print(file.read())
+
+            if dry_run:
+                return
+
             process = subprocess.run(
                 script,
                 stdout=subprocess.PIPE,
@@ -189,7 +213,8 @@ def execute_step(context, base_dir, step, current, type, verbose=False):
                 raise Exception
 
     if type in ['verify', 'rollback']:
-        context.put_current_step(step, current)
+        if not dry_run:
+            context.put_current_step(step, current)
 
 def sql(base_dir, target, query, verbose=False):
     with get_target_context(target) as context:

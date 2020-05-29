@@ -5,14 +5,13 @@
 Usage:
   migrate <target> status [--folder=<folder>] [--verbose]
   migrate add <step> <type> [--folder=<folder>] [--verbose]
-  migrate <target> up-to (<step> | --latest) [--folder=<folder>] [--verbose]
-  migrate <target> rollback-to (<step> | --first) [--folder=<folder>] [--verbose]
-  migrate <target> previous [--folder=<folder>] [--verbose]
+  migrate <target> up-to (<step> | --latest) [--folder=<folder>] [--verbose] [--dry-run]
+  migrate <target> rollback-to (<step> | --zero) [--folder=<folder>] [--verbose] [--dry-run]
+  migrate <target> previous [--folder=<folder>] [--verbose] [--dry-run]
   migrate <target> sql <query> [--verbose]
   migrate <target> reset [--verbose]
   migrate <target> force-state <step> [--verbose]
   migrate (-h | --help)
-  migrate --version
 
 Arguments:
 
@@ -21,8 +20,7 @@ Arguments:
   <target>               Where to execute the migrations
 
 Options:
-  -h --help              Show this screen.
-  --version              Show version.
+  -h --help              Show this help.
   --verbose              Let exceptions raise.
   --folder=<folder>      Where to read and store files
 
@@ -34,7 +32,7 @@ import sys
 import migrate
 
 if __name__ == '__main__':
-    spec = docopt(__doc__, version='0.1.0')
+    spec = docopt(__doc__)
 
     root = spec['--folder'] or '%s/migrations' % os.getcwd()
 
@@ -50,18 +48,18 @@ if __name__ == '__main__':
 
         elif spec['up-to']:
             if spec['--latest']:
-                migrate.up_to_latest(root, spec['<target>'], spec['--verbose'])
+                migrate.up_to_latest(root, spec['<target>'], spec['--verbose'], spec['--dry-run'])
             else:
-                migrate.up_to(root, spec['<target>'], spec['<step>'], spec['--verbose'])
+                migrate.up_to(root, spec['<target>'], spec['<step>'], spec['--verbose'], spec['--dry-run'])
 
         elif spec['previous']:
-            migrate.previous(root, spec['<target>'], spec['--verbose'])
+            migrate.previous(root, spec['<target>'], spec['--verbose'], spec['--dry-run'])
 
         elif spec['rollback-to']:
-            if spec['--first']:
-                migrate.rollback_to_first(root, spec['<target>'], spec['--verbose'])
+            if spec['--zero']:
+                migrate.rollback_to_zero(root, spec['<target>'], spec['--verbose'], spec['--dry-run'])
             else:
-                migrate.rollback_to(root, spec['<target>'], spec['<step>'], spec['--verbose'])
+                migrate.rollback_to(root, spec['<target>'], spec['<step>'], spec['--verbose'], spec['--dry-run'])
 
         elif spec['sql']:
             results = migrate.sql(root, spec['<target>'], spec['<query>'], spec['--verbose'])

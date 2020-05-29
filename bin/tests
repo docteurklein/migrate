@@ -8,7 +8,7 @@ run_tests() {
     migrate $target sql 'drop table if exists test'
     migrate $target reset --verbose
     migrate $target up-to --latest --folder=example/$folder --verbose
-    migrate $target rollback-to --first --verbose --folder=example/$folder
+    migrate $target rollback-to --zero --verbose --folder=example/$folder
     migrate $target up-to test1 --verbose --folder=example/$folder
     migrate $target up-to --latest --folder=example/$folder --verbose
     migrate $target previous --verbose --folder=example/$folder
