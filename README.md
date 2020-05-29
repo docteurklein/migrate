@@ -64,7 +64,7 @@ If `verify` exits with a status code different than `0`, all rollback scripts fr
 
 The target is represented by an URL (containing credentials and configuration).
 The target is the thing we want to mutate.
-The target stores the name of the last migrated step.
+The target stores the history of all executed steps.
 
 Currently supported targets are:
 
