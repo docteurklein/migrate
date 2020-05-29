@@ -77,6 +77,14 @@ Those variables take precedence over the values passed in URL.
 
 example: `migrate sqlite:path/to/some_file.sqlite status`
 
+
+### arbitray python module target
+
+You can write your own python module that respects the [`Context` interface](./migrate/targets/sqlite.py#L8),
+and use it like this:
+
+    migrate some.python.module:some-host/some/param status`
+
 ### SQL scripts
 
 Files ending with `.sql` are treated differently than others if the target supports it:
