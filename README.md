@@ -21,7 +21,13 @@ A migration runner, not especially targeting sql databases.
 
     migrate pg://prod rollback-to 'some_previous_step'
     migrate pg://prod rollback-to --zero
-    migrate pg://prod rollback-to --previous
+
+
+### Go back to previous state (either up or rollback)
+
+    migrate pg: previous
+
+> Note: executing this twice would end up to where you started.
 
 
 ## verifying side-effects before executing them
