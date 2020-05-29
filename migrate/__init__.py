@@ -6,6 +6,7 @@ import glob
 import subprocess
 import sqlite3
 import contextlib
+import importlib
 from urllib.parse import urlparse
 from . import targets
 
@@ -53,8 +54,10 @@ def add(base_dir, step: str, type: str):
 
 def get_target_context(target):
     params = urlparse(target)
-
-    return getattr(targets, params.scheme).get_target_context(params)
+    try:
+        return getattr(targets, params.scheme).get_target_context(params)
+    except AttributeError:
+        return importlib.import_module(params.scheme).get_target_context(params)
 
 
 def up_to_latest(base_dir, target, verbose=False):

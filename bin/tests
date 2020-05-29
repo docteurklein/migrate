@@ -2,16 +2,27 @@
 
 set -exuo pipefail
 
-migrate pg:// sql 'drop table if exists test'
-migrate pg:// reset --verbose
-migrate pg:// up-to --latest --folder=example --verbose
-migrate pg:// rollback-to --first --verbose --folder=example
-migrate pg:// up-to test1 --verbose --folder=example
-migrate pg:// up-to --latest --folder=example --verbose
-migrate pg:// previous --verbose --folder=example
-migrate pg:// previous --verbose --folder=example
-migrate pg:// previous --verbose --folder=example
-migrate pg:// previous --verbose --folder=example
-migrate pg:// up-to --latest --folder=example --verbose
+run_tests() {
+    local target=$1
+    local folder=$2
+    migrate $target sql 'drop table if exists test'
+    migrate $target reset --verbose
+    migrate $target up-to --latest --folder=example/$folder --verbose
+    migrate $target rollback-to --first --verbose --folder=example/$folder
+    migrate $target up-to test1 --verbose --folder=example/$folder
+    migrate $target up-to --latest --folder=example/$folder --verbose
+    migrate $target previous --verbose --folder=example/$folder
+    migrate $target previous --verbose --folder=example/$folder
+    migrate $target previous --verbose --folder=example/$folder
+    migrate $target previous --verbose --folder=example/$folder
+    migrate $target up-to --latest --folder=example/$folder --verbose
 
-migrate pg:// sql 'select test2 from test'
+    migrate $target sql 'select test2 from test'
+}
+
+run_tests pg: pg
+run_tests sqlite:/tmp/migrate.sqlite sqlite
+
+
+# full module name
+migrate migrate.targets.sqlite:/tmp/migrate.sqlite status --folder=example/sqlite --verbose
