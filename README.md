@@ -58,9 +58,13 @@ The target stores the name of the last migrated step.
 
 Currently supported targets are:
 
- - postgresql: `pg://user:password@hostname/db_name`
+### postgres target
+    
+example: `migrate pg://user:password@hostname/db_name status`
 
-### Environment variables
+#### Environment variables
+
+Those variables take precedence over the values passed in URL.
 
  - `POSTGRES_DBNAME`
  - `POSTGRES_USER`
@@ -68,12 +72,14 @@ Currently supported targets are:
  - `POSTGRES_PASSWORD_FILE` (wins over `POSTGRES_PASSWORD`)
  - `POSTGRES_HOST`
  - `POSTGRES_PORT`
+ 
+### sqlite target
 
-Those variables take precedence over the values passed in URL.
+example: `migrate sqlite:path/to/some_file.sqlite status`
 
 ### SQL scripts
 
-Files ending with `.sql` are treated differently than others:
+Files ending with `.sql` are treated differently than others if the target supports it:
 their contents are passed to the current transaction opened on the target.
 
 
@@ -127,3 +133,9 @@ curl -f -X GET http://elasticsearch.local:9200/twitter
 
 Each step uses executable files with shebang (except `.sql` files) for a maximum flexibility.
 
+
+## Contributing
+
+### Running tests
+
+    ./bin/tests
